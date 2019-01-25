@@ -1,0 +1,10 @@
+---
+
+- name: Check if java installed
+  stat: path=/cust/jdk1.8.0_161_udeploy
+  register: java_path
+
+- name: Install jdk18 for uDeploy
+  unarchive: src=jdk1.8.0_161_udeploy.tgz dest=/cust copy=yes
+  when: not java_path.stat.exists
+

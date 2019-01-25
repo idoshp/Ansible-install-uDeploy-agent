@@ -1,0 +1,37 @@
+---
+- name: Check if Service Exists
+  stat: path=/etc/init.d/udagent
+  register: service_exists
+
+- name: Stop Udeploy (if exist)
+  command: service udagent stop
+  args:
+    warn: no
+  when: service_exists.stat.exists
+
+- name: Remove old udeploy service
+  file: path=/etc/init.d/udagent state=absent
+  when: service_exists.stat.exists
+
+- name: Remove old udeploy installation
+  file: path=/opt/urban state=absent
+  when: service_exists.stat.exists
+
+- name: Copy uDeploy agent to target host
+  unarchive: src=udeploy-install.tgz dest=/opt copy=yes
+
+- name: Install uDeploy agent on target server
+  command: sh /opt/udeploy-install/udeploy-install.sh
+
+- name: Wait for agent to start
+  wait_for: timeout=30
+  
+- name: Register new agent id
+  shell: "grep locked/agent.id /opt/urban/conf/agent/installed.properties"
+  register: AGENT
+  when: service_exists.stat.exists
+
+- name: Update uDeploy UI
+  debug:
+    msg: "There was an old agent installed on the server, please update the uDeploy UI with the new agent id {{ AGENT.stdout_lines }}"
+  when: service_exists.stat.exists
